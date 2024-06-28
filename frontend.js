@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const ChatbotSQLVisualization = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [detailedView, setDetailedView] = useState(null);
+  const [chartType, setChartType] = useState('bar');
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
@@ -25,17 +29,17 @@ const ChatbotSQLVisualization = () => {
 
   const processQuery = (query) => {
     const mockData = [
-      { category: 'Electronics', sales: 15000 },
-      { category: 'Clothing', sales: 12000 },
-      { category: 'Books', sales: 8000 },
-      { category: 'Home & Garden', sales: 10000 },
+      { category: 'Electronics', sales: 15000, profit: 3000 },
+      { category: 'Clothing', sales: 12000, profit: 2400 },
+      { category: 'Books', sales: 8000, profit: 1600 },
+      { category: 'Home & Garden', sales: 10000, profit: 2000 },
     ];
 
     return [
       { type: 'bot', content: 'Here are the results of your query:' },
       { type: 'bot', content: 'table', data: mockData },
       { type: 'bot', content: 'chart', data: mockData },
-      { type: 'bot', content: 'This chart shows sales data across different product categories. Electronics leads with $15,000 in sales, followed by Clothing at $12,000. Books have the lowest sales at $8,000.' },
+      { type: 'bot', content: 'This chart shows sales and profit data across different product categories.' },
       { type: 'bot', content: 'followUp', questions: [
         'Can you show me the trend of Electronics sales over the last 6 months?',
         'What\'s the profit margin for each category?',
@@ -61,6 +65,70 @@ const ChatbotSQLVisualization = () => {
     });
   };
 
+  const renderChart = (data, type) => {
+    switch (type) {
+      case 'bar':
+        return (
+          <BarChart width={350} height={300} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="sales" fill="#8884d8" onClick={handleBarClick} />
+            <Bar dataKey="profit" fill="#82ca9d" onClick={handleBarClick} />
+          </BarChart>
+        );
+      case 'pie':
+        return (
+          <PieChart width={350} height={300}>
+            <Pie
+              data={data}
+              cx={175}
+              cy={150}
+              labelLine={false}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="sales"
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        );
+      case 'line':
+        return (
+          <LineChart width={350} height={300} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="sales" stroke="#8884d8" />
+            <Line type="monotone" dataKey="profit" stroke="#82ca9d" />
+          </LineChart>
+        );
+      case 'stacked':
+        return (
+          <AreaChart width={350} height={300} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Area type="monotone" dataKey="sales" stackId="1" stroke="#8884d8" fill="#8884d8" />
+            <Area type="monotone" dataKey="profit" stackId="1" stroke="#82ca9d" fill="#82ca9d" />
+          </AreaChart>
+        );
+      default:
+        return null;
+    }
+  };
+
   const renderMessage = (message, index) => {
     switch (message.type) {
       case 'user':
@@ -82,6 +150,7 @@ const ChatbotSQLVisualization = () => {
                       <tr>
                         <th className="text-left">Category</th>
                         <th className="text-left">Sales</th>
+                        <th className="text-left">Profit</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -89,6 +158,7 @@ const ChatbotSQLVisualization = () => {
                         <tr key={i}>
                           <td>{row.category}</td>
                           <td>{row.sales}</td>
+                          <td>{row.profit}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -102,15 +172,21 @@ const ChatbotSQLVisualization = () => {
             <div key={index} className="flex justify-start mb-4">
               <Card className="w-full max-w-md">
                 <CardContent>
+                  <div className="mb-4">
+                    <Select value={chartType} onValueChange={setChartType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select chart type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                        <SelectItem value="pie">Pie Chart</SelectItem>
+                        <SelectItem value="line">Line Chart</SelectItem>
+                        <SelectItem value="stacked">Stacked Chart</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div style={{ width: '100%', height: 300 }}>
-                    <BarChart width={350} height={300} data={message.data}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="sales" fill="#8884d8" onClick={handleBarClick} />
-                    </BarChart>
+                    {renderChart(message.data, chartType)}
                   </div>
                   <p className="text-sm text-gray-500 mt-2">Click on a bar for more details</p>
                 </CardContent>
